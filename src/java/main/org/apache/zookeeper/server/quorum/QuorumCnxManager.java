@@ -969,6 +969,7 @@ public class QuorumCnxManager {
             this.sock = sock;
             this.sw = sw;
             this.din = din;
+            /* for sugon branch only
             try {
                 // OK to wait until socket disconnects while reading.
                 sock.setSoTimeout(0);
@@ -976,7 +977,7 @@ public class QuorumCnxManager {
                 LOG.error("Error while accessing socket for " + sid, e);
                 closeSocket(sock);
                 running = false;
-            }
+            }*/
         }
         
         /**
