@@ -23,6 +23,48 @@ xmlns:artifact="antlib:org.apache.maven.artifact.ant"
 xmlns:maven="antlib:org.apache.maven.artifact.ant"
 xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
 
+    <!-- ====================================================== -->
+    <!-- Dependency versions                                    -->
+    <!-- ====================================================== -->
+    <property name="slf4j.version" value="1.7.25"/>
+
+    <property name="wagon-http.version" value="2.4"/>
+    <property name="maven-ant-tasks.version" value="2.1.3"/>
+    <property name="log4j.version" value="1.2.17"/>
+    <property name="jline.version" value="0.9.94"/>
+
+    <property name="jdeb.version" value="0.8"/>
+
+    <property name="audience-annotations.version" value="0.5.0" />
+
+    <property name="netty.version" value="3.10.6.Final"/>
+
+    <property name="junit.version" value="4.12"/>
+    <property name="mockito.version" value="1.8.5"/>
+    <property name="checkstyle.version" value="6.1.1"/>
+    <property name="commons-collections.version" value="3.2.2"/>
+    <property name="commons-io.version" value="2.4"/>
+
+    <property name="apache-directory-server.version" value="2.0.0-M15"/>
+    <property name="apache-directory-api.version" value="1.0.0-M20"/>
+
+    <property name="jdiff.version" value="1.0.9"/>
+    <property name="xerces.version" value="1.4.4"/>
+
+    <property name="apache-rat-tasks.version" value="0.6"/>
+    <property name="commons-lang.version" value="2.4"/>
+
+    <property name="dependency-check-ant.version" value="3.2.1"/>
+
+    <property name="hamcrest.version" value="1.3"/>
+
+    <property name="clover.version" value="4.2.1" />
+
+
+    <!-- ====================================================== -->
+    <!-- Project properties                                     -->
+    <!-- ====================================================== -->
+
     <!-- read build.properties from the basedir if any -->
     <property file="${basedir}/build.properties" />
 
@@ -31,7 +73,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
 
     <property environment="env"/>
     
-    <property name="version" value="3.4.11" />
+    <property name="version" value="3.4.14-SNAPSHOT" />
     <property name="final.name" value="${name}-${version}"/>
     <property name="revision.dir" value="${basedir}/.revision" />
     <property name="revision.properties" value="revision.properties" />
@@ -91,19 +133,13 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
     <property name="test.quick" value="no" />
     <property name="conf.dir" value="${basedir}/conf"/>
     <property name="docs.dir" value="${basedir}/docs"/>
-    <property name="docs.src" value="${basedir}/src/docs"/>
+    <property name="docs.src" value="${basedir}/zookeeper-docs"/>
     <property name="javadoc.link.java"
               value="http://docs.oracle.com/javase/6/docs/api/" />
     <property name="javadoc.packages" value="org.apache.*" />
 
     <property name="dist.dir" value="${build.dir}/${final.name}"/>
     <property name="dist.maven.dir" value="${dist.dir}/dist-maven"/>
-
-    <property name="clover.home" location="${env.CLOVER_HOME}"/>
-    <property name="clover.jar" location="${clover.home}/lib/clover.jar" />
-    <property name="clover.db.dir" location="${test.java.build.dir}/clover/db"/>
-    <property name="clover.report.dir"
-              location="${test.java.build.dir}/clover/reports"/>
 
     <property name="contrib.dir" value="${src.dir}/contrib"/>
     <property name="recipes.dir" value="${src.dir}/recipes"/>
@@ -118,6 +154,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
     <property name="ivy.jdiff.lib" value="${build.dir}/jdiff/lib"/>
     <property name="ivy.releaseaudit.lib" value="${build.dir}/releaseaudit/lib"/>
     <property name="ivy.owasp.lib" value="${build.dir}/owasp/lib"/>
+    <property name="ivy.clover.lib" value="${build.dir}/clover/lib"/>
     <property name="ivysettings.xml" value="${basedir}/ivysettings.xml"/>
 
     <property name="mvnrepo" value="https://repo1.maven.org/maven2"/>
@@ -126,21 +163,16 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
     <property name="ant_task_repo_url"
         value="${mvnrepo}${tsk.org}${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
     <property name="ant_task.jar" location="${ivy.lib}/maven-ant-tasks-${ant-task.version}.jar"/>
-    
-    <available property="clover.present"
-               classname="com.cenqua.clover.CloverInstr"
-               classpath="${clover.home}/lib/clover.jar"/>
+
+    <!-- clover property set -->
+    <property name="clover.home" location="${build.dir}/clover"/>
+    <property name="clover.jar" location="${clover.home}/lib/clover-${clover.version}.jar"/>
+    <property name="clover.dest" location="${build.dir}/clover"/>
+    <property name="clover.db.dir" location="${clover.dest}/db"/>
+    <property name="clover.report.dir" location="${clover.dest}/reports"/>
+    <property name="clover.db" location="${clover.db.dir}/zookeeper-coverage.db"/>
 
     <available file="${c.src.dir}/Makefile" property="Makefile.present"/>
-
-    <!-- check if clover reports should be generated -->
-    <condition property="clover.enabled">
-      <and>
-        <isset property="run.clover"/>
-        <isset property="clover.present"/>
-      </and>
-    </condition>
-
 
     <property name="test.cobertura.output.format" value="html" />
     <property name="coveragereport.dir" value="${build.dir}/cobertura" />
@@ -205,39 +237,6 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
     <property name="javadoc-jar" value="${dist.maven.dir}/${final.name}-javadoc.jar"/>
 
     <!-- ====================================================== -->
-    <!-- Dependency versions                                    -->
-    <!-- ====================================================== -->
-    <property name="slf4j.version" value="1.6.1"/>
-
-    <property name="wagon-http.version" value="2.4"/>
-    <property name="maven-ant-tasks.version" value="2.1.3"/>
-    <property name="log4j.version" value="1.2.16"/>
-    <property name="jline.version" value="0.9.94"/>
-
-    <property name="jdeb.version" value="0.8"/>
-
-    <property name="audience-annotations.version" value="0.5.0" />
-
-    <property name="netty.version" value="3.10.5.Final"/>
-
-    <property name="junit.version" value="4.8.1"/>
-    <property name="mockito.version" value="1.8.5"/>
-    <property name="checkstyle.version" value="6.1.1"/>
-    <property name="commons-collections.version" value="3.2.2"/>
-    <property name="commons-io.version" value="2.4"/>
-
-    <property name="apache-directory-server.version" value="2.0.0-M15"/>
-    <property name="apache-directory-api.version" value="1.0.0-M20"/>
-
-    <property name="jdiff.version" value="1.0.9"/>
-    <property name="xerces.version" value="1.4.4"/>
-
-    <property name="apache-rat-tasks.version" value="0.6"/>
-    <property name="commons-lang.version" value="2.4"/>
-
-    <property name="dependency-check-ant.version" value="2.1.0"/>
-
-    <!-- ====================================================== -->
     <!-- Macro definitions                                      -->
     <!-- ====================================================== -->
     <macrodef name="macro_tar" description="Worker Macro for tar">
@@ -265,7 +264,9 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
       <fileset dir="${ant.home}/lib">
           <include name="ant.jar" />
       </fileset>
-      <pathelement path="${clover.jar}" />
+      <fileset dir="${clover.home}/lib" erroronmissingdir="false">
+          <include name="**/*.jar" if="run.clover" />
+      </fileset>
     </path>
 
     <!-- the normal classpath -->
@@ -435,6 +436,12 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         <ivy:cachepath pathid="owasp-classpath" conf="owasp"/>
     </target>
 
+    <target name="ivy-retrieve-clover" if="run.clover" depends="init,ivy-init">
+        <ivy:retrieve settingsRef="${ant.project.name}" conf="clover"
+                      pattern="${ivy.clover.lib}/[artifact]-[revision].[ext]"/>
+        <ivy:cachepath pathid="clover-classpath" conf="clover"/>
+    </target>
+
     <target name="ivy-retrieve-mvn-ant-task" depends="init,ivy-init">
       <ivy:retrieve settingsRef="${ant.project.name}" conf="mvn-ant-task"
                     pattern="${ivy.lib}/[artifact]-[revision].[ext]"/>
@@ -474,11 +481,15 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         <env key="ACLOCAL" value="aclocal -I ${cppunit.m4}"/>
       </exec>
       <mkdir dir="${build.dir}/c" />
+      <condition property="enable.gcov.arg" value="--enable-gcov" else="">
+        <equals arg1="${enable.gcov}" arg2="true"/>
+      </condition>
       <exec executable="${c.src.dir}/configure" dir="${build.dir}/c"
             failonerror="yes">
         <env key="base_dir" value="${basedir}"/>
         <env key="CALLER" value="ANT"/>
         <arg value="--prefix=${build.dir}/c/build/${package.prefix}"/>
+        <arg line="${enable.gcov.arg}"/>
       </exec>
       <property name="c.build" value="${build.dir}/c/build"/>
       <exec dir="${build.dir}/c" executable="make" failonerror="true">
@@ -807,7 +818,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
 
       <copy todir="${dist.dir}">
         <fileset file="CHANGES.txt"/>
-        <fileset file="README.txt"/>
+        <fileset file="README.md"/>
         <fileset file="README_packaging.txt"/>
         <fileset file="build.xml"/>
         <fileset file="ivy.xml"/>
@@ -926,7 +937,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
 
       <copy todir="${dist.dir}">
         <fileset file="CHANGES.txt"/>
-        <fileset file="README.txt"/>
+        <fileset file="README.md"/>
         <fileset file="README_packaging.txt"/>
         <fileset file="build.xml"/>
         <fileset file="ivy.xml"/>
@@ -949,7 +960,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         <replacetoken>/tmp/zookeeper</replacetoken>
         <replacevalue>${VAR_DIR}/data</replacevalue>
       </replace>
-  	  
+
       <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/sbin"/>
@@ -1063,7 +1074,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         <property name="dist.dir" value="${dist.dir}"/>
         <fileset file="${contrib.dir}/build.xml"/>
         <fileset file="${recipes.dir}/build.xml"/>
-      </subant>  	
+      </subant>
       <path id="c.lib">
         <fileset dir="${build.dir}">
           <include name="${final.name}-lib.tar.gz"/>
@@ -1168,10 +1179,10 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         </tarfileset>
         <tarfileset dir="${build.dir}/c/build/${package.prefix}/include" prefix="${package.prefix}/include">
           <include name="**" />
-        </tarfileset> 
+        </tarfileset>
         <tarfileset dir="${build.dir}/c/build/${package.prefix}/lib" filemode="755" prefix="${package.prefix}/lib">
           <include name="**" />
-        </tarfileset> 
+        </tarfileset>
         <tarfileset dir="${build.dir}/${final.name}/conf" filemode="644" prefix="${package.conf.dir}">
           <include name="**" />
         </tarfileset>
@@ -1391,7 +1402,29 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
       </condition>
     </target>	
 
-    <target name="check-cppunit-makefile" depends="init" >
+    <target name="verify-cppunit-makefile-gcov">
+      <fileset id="fileset.makefile.gcov.enabled" dir="${test.cppunit.dir}" erroronmissingdir="false">
+        <include name="Makefile"/>
+        <containsregexp expression="^[^#]+-ftest-coverage.*$"/>
+      </fileset>
+      <condition property="makefile.gcov.enabled">
+        <resourcecount when="greater" count="0" refid="fileset.makefile.gcov.enabled"/>
+      </condition>
+      <echo message="makefile.gcov.enabled = ${makefile.gcov.enabled}"/>
+      <condition property="delete.cppunit.makefile">
+        <and>
+          <isset property="makefile.gcov.enabled"/>
+          <not><equals arg1="${enable.gcov}" arg2="true"/></not>
+        </and>
+      </condition>
+      <echo message="delete.cppunit.makefile = ${delete.cppunit.makefile}"/>
+    </target>
+    
+    <target name="delete-cppunit-makefile" if="delete.cppunit.makefile">
+      <delete file="${test.cppunit.dir}/Makefile"/>
+    </target>
+    
+    <target name="check-cppunit-makefile" depends="init,verify-cppunit-makefile-gcov,delete-cppunit-makefile" >
     	<condition property="need.cppunit.makefile">
        		<not> <available file="${test.cppunit.dir}/Makefile"/> </not>
     	</condition>
@@ -1421,11 +1454,15 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
         <param name="cppunit" value="true"/>
       </antcall>
     	<mkdir dir="${test.cppunit.dir}"/>
+        <condition property="enable.gcov.arg" value="--enable-gcov" else="">
+          <equals arg1="${enable.gcov}" arg2="true"/>
+        </condition>
     	<exec executable="${c.src.dir}/configure" dir="${test.cppunit.dir}"
           	failonerror="yes">
                 <env key="base_dir" value="${basedir}"/>
                 <env key="CALLER" value="ANT"/>
       		<arg value="--prefix=${test.cppunit.dir}"/>
+            <arg line="${enable.gcov.arg}"/>
     	</exec>
     </target>
 
@@ -1479,60 +1516,92 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
 	<!-- yet to implement -->
     </target>
     
-    <target name="test-core-java" depends="test-init, test-category, junit.run"/> 
+    <target name="test-core-java" depends="test-init, test-category, junit.run"/>
 
-    <target name="test-core-cppunit" depends="test-init, test-category, call-test-cppunit"/> 
+    <target name="test-core-cppunit" depends="test-init, test-category, call-test-cppunit"/>
 
-    <target name="test-core" depends="test-core-java, test-core-cppunit"/> 
+    <target name="test-core" depends="test-core-java, test-core-cppunit"/>
 
     <!-- ====================================================== -->
     <!-- Run optional third-party tool targets                  -->
     <!-- ====================================================== -->
 
-    <!-- clover code coverage -->
-    <target name="clover" depends="clover.setup, clover.info" 
-            description="Instrument the Unit tests using Clover.  Requires a Clover license and CLOVER_HOME environment variable set appropriately.  To use, specify -Drun.clover=true on the command line."/>
+    <!-- Clover code coverage -->
+    <target name="test-coverage-clover-java"
+            description="Runs Java tests with Clover and generates coverage report in HTML and XML.">
+      <antcall target="test-core-java">
+        <param name="run.clover" value="true"/>
+      </antcall>
+      <antcall target="clover-report"/>
+    </target>
 
-    <target name="clover.setup" if="clover.enabled">
+    <target name="clover" if="run.clover" depends="ivy-retrieve-clover,clover.check,clover.setup"
+            description="Used in compile target to add source code instrumentation for Clover and sets up the Clover database."/>
+
+    <target name="clover.check">
+        <available property="clover.present"
+                   classname="com.atlassian.clover.CloverInstr"
+                   classpath="${clover.home}/lib/clover-${clover.version}.jar"/>
+        <fail if="run.clover" unless="clover.present">
+            Clover not found.
+            Please make sure clover-${clover.version}.jar is in ${clover.home}/lib, or made available
+            to Ant using other mechanisms like -lib or CLASSPATH.
+        </fail>
+    </target>
+
+    <target name="clover.setup" if="run.clover">
       <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
       <mkdir dir="${clover.db.dir}"/>
-      <clover-setup initString="${clover.db.dir}/zookeeper_coverage.db">
+      <clover-setup initString="${clover.db}">
         <fileset dir="${java.src.dir}"
                  includes="org/apache/zookeeper/**/*"
-                 excludes="org/apache/zookeeper/version/**/*"/>
+                 excludes="org/apache/zookeeper/version/**/*">
+        </fileset>
+        <testsources dir="${test.src.dir}">
+          <testclass package="org.apache.zookeeper.*" name=".*Test">
+              <testmethod annotation="Test"/>
+          </testclass>
+        </testsources>
       </clover-setup>
     </target>
 
-    <target name="clover.info" if="run.clover" unless="clover.present">
-      <echo>
-        Clover not found. Code coverage reports disabled.
-      </echo>
-    </target>
-
-    <target name="clover.check">
-      <fail unless="clover.present">
-        ##################################################################
-        Clover not found.
-        Please make sure clover.jar is in ANT_HOME/lib, or made available
-        to Ant using other mechanisms like -lib or CLASSPATH.
-        ##################################################################
-      </fail>
-    </target>
-
-    <target name="generate-clover-reports" depends="clover.check, clover">
+    <target name="clover-report" depends="ivy-retrieve-clover"
+            description="Generates coverage report in HTML and XML. Run the tests first with 'ant -Drun.clover=true test-core-java' to generate coverage data.">
+      <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
       <mkdir dir="${clover.report.dir}"/>
-      <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/> 
-      
-      <clover-report initString="${clover.db.dir}/zookeeper_coverage.db">
+      <clover-report initString="${clover.db}">
         <current outfile="${clover.report.dir}" title="${final.name}">
           <format type="html"/>
         </current>
       </clover-report>
-      <clover-report initString="${clover.db.dir}/zookeeper_coverage.db">
+      <clover-report initString="${clover.db}">
         <current outfile="${clover.report.dir}/clover.xml" title="${final.name}">
           <format type="xml"/>
         </current>
       </clover-report>
+    </target>
+
+    <target name="c_coverage_report" description="Runs coverage report for ZK C client code.">
+      <!-- delete configure and make files so that they get regenerated with coverage enabled -->
+      <delete file="${c.src.dir}/configure"/>
+      <delete file="${test.cppunit.dir}/Makefile"/>
+      <subant target="test-core-cppunit" failonerror="false">
+        <property name="enable.gcov" value="true"/>
+        <fileset dir="." file="build.xml"/>
+      </subant>
+      <mkdir dir="${build.dir}/c_coverage" />
+      <copy todir="${build.dir}/c" verbose="true" overwrite="true" failonerror="true">
+        <fileset dir="${build.dir}/test/test-cppunit/.libs">
+          <include name="*.gcno"/>
+          <include name="*.gcda"/>
+        </fileset>
+      </copy>
+      <exec dir="${build.dir}/c" executable="lcov">
+        <arg line="-t testname -o ZK_C_client.info -c -d ."/>
+      </exec>
+      <exec dir="${build.dir}/c_coverage" executable="genhtml">
+        <arg line="-o report ${build.dir}/c/ZK_C_client.info"/>
+      </exec>
     </target>
 
     <!-- Run with 'ant -Dfindbugs.home="path to Findbugs directory" findbugs -->
@@ -1862,7 +1931,7 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
      </condition>
 
      <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists">
-       <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+       <get src="https://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
             dest="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
 
        <bunzip2 src="${src.dir}/java/ant-eclipse-1.0.bin.tar.bz2"/>

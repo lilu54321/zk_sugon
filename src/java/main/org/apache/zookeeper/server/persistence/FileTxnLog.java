@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,6 +41,7 @@ import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.InputArchive;
 import org.apache.jute.OutputArchive;
 import org.apache.jute.Record;
+import org.apache.zookeeper.server.ServerStats;
 import org.apache.zookeeper.server.util.SerializeUtils;
 import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
@@ -90,12 +92,12 @@ import org.slf4j.LoggerFactory;
 public class FileTxnLog implements TxnLog {
     private static final Logger LOG;
 
-    static long preAllocSize =  65536 * 1024;
-
     public final static int TXNLOG_MAGIC =
         ByteBuffer.wrap("ZKLG".getBytes()).getInt();
 
     public final static int VERSION = 2;
+
+    public static final String LOG_FILE_PREFIX = "log";
 
     /** Maximum time we allow for elapsed fsync before WARNing */
     private final static long fsyncWarningThresholdMS;
@@ -103,14 +105,6 @@ public class FileTxnLog implements TxnLog {
     static {
         LOG = LoggerFactory.getLogger(FileTxnLog.class);
 
-        String size = System.getProperty("zookeeper.preAllocSize");
-        if (size != null) {
-            try {
-                preAllocSize = Long.parseLong(size) * 1024;
-            } catch (NumberFormatException e) {
-                LOG.warn(size + " is not a valid value for preAllocSize");
-            }
-        }
         /** Local variable to read fsync.warningthresholdms into */
         Long fsyncWarningThreshold;
         if ((fsyncWarningThreshold = Long.getLong("zookeeper.fsync.warningthresholdms")) == null)
@@ -128,8 +122,10 @@ public class FileTxnLog implements TxnLog {
     long dbId;
     private LinkedList<FileOutputStream> streamsToFlush =
         new LinkedList<FileOutputStream>();
-    long currentSize;
     File logFileWrite = null;
+    private FilePadding filePadding = new FilePadding();
+
+    private ServerStats serverStats;
 
     /**
      * constructor for FileTxnLog. Take the directory
@@ -141,22 +137,30 @@ public class FileTxnLog implements TxnLog {
     }
 
     /**
-     * method to allow setting preallocate size
-     * of log file to pad the file.
-     * @param size the size to set to in bytes
-     */
+      * method to allow setting preallocate size
+      * of log file to pad the file.
+      * @param size the size to set to in bytes
+      */
     public static void setPreallocSize(long size) {
-        preAllocSize = size;
+        FilePadding.setPreallocSize(size);
     }
 
     /**
-     * creates a checksum alogrithm to be used
+     * Setter for ServerStats to monitor fsync threshold exceed
+     * @param serverStats used to update fsyncThresholdExceedCount
+     */
+     @Override
+     public void setServerStats(ServerStats serverStats) {
+         this.serverStats = serverStats;
+     }
+
+    /**
+     * creates a checksum algorithm to be used
      * @return the checksum used for this txnlog
      */
     protected Checksum makeChecksumAlgorithm(){
         return new Adler32();
     }
-
 
     /**
      * rollover the current log file to a new one.
@@ -205,24 +209,22 @@ public class FileTxnLog implements TxnLog {
         }
 
         if (logStream==null) {
-            if(LOG.isInfoEnabled()){
-                LOG.info("Creating new log file: log." +
-                        Long.toHexString(hdr.getZxid()));
-            }
+           if(LOG.isInfoEnabled()){
+                LOG.info("Creating new log file: " + Util.makeLogName(hdr.getZxid()));
+           }
 
-            logFileWrite = new File(logDir, ("log." +
-                    Long.toHexString(hdr.getZxid())));
-            fos = new FileOutputStream(logFileWrite);
-            logStream=new BufferedOutputStream(fos);
-            oa = BinaryOutputArchive.getArchive(logStream);
-            FileHeader fhdr = new FileHeader(TXNLOG_MAGIC,VERSION, dbId);
-            fhdr.serialize(oa, "fileheader");
-            // Make sure that the magic number is written before padding.
-            logStream.flush();
-            currentSize = fos.getChannel().position();
-            streamsToFlush.add(fos);
+           logFileWrite = new File(logDir, Util.makeLogName(hdr.getZxid()));
+           fos = new FileOutputStream(logFileWrite);
+           logStream=new BufferedOutputStream(fos);
+           oa = BinaryOutputArchive.getArchive(logStream);
+           FileHeader fhdr = new FileHeader(TXNLOG_MAGIC,VERSION, dbId);
+           fhdr.serialize(oa, "fileheader");
+           // Make sure that the magic number is written before padding.
+           logStream.flush();
+           filePadding.setCurrentSize(fos.getChannel().position());
+           streamsToFlush.add(fos);
         }
-        padFile(fos);
+        filePadding.padFile(fos.getChannel());
         byte[] buf = Util.marshallTxnEntry(hdr, txn);
         if (buf == null || buf.length == 0) {
             throw new IOException("Faulty serialization for header " +
@@ -237,15 +239,6 @@ public class FileTxnLog implements TxnLog {
     }
 
     /**
-     * pad the current file to increase its size
-     * @param out the outputstream to be padded
-     * @throws IOException
-     */
-    private void padFile(FileOutputStream out) throws IOException {
-        currentSize = Util.padLogFile(out, currentSize, preAllocSize);
-    }
-
-    /**
      * Find the log file that starts at, or just before, the snapshot. Return
      * this and all subsequent logs. Results are ordered by zxid of file,
      * ascending order.
@@ -254,12 +247,12 @@ public class FileTxnLog implements TxnLog {
      * @return
      */
     public static File[] getLogFiles(File[] logDirList,long snapshotZxid) {
-        List<File> files = Util.sortDataDir(logDirList, "log", true);
+        List<File> files = Util.sortDataDir(logDirList, LOG_FILE_PREFIX, true);
         long logZxid = 0;
         // Find the log file that starts before or at the same time as the
         // zxid of the snapshot
         for (File f : files) {
-            long fzxid = Util.getZxidFromName(f.getName(), "log");
+            long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);
             if (fzxid > snapshotZxid) {
                 continue;
             }
@@ -271,7 +264,7 @@ public class FileTxnLog implements TxnLog {
         }
         List<File> v=new ArrayList<File>(5);
         for (File f : files) {
-            long fzxid = Util.getZxidFromName(f.getName(), "log");
+            long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);
             if (fzxid < logZxid) {
                 continue;
             }
@@ -288,7 +281,7 @@ public class FileTxnLog implements TxnLog {
     public long getLastLoggedZxid() {
         File[] files = getLogFiles(logDir.listFiles(), 0);
         long maxLog=files.length>0?
-                Util.getZxidFromName(files[files.length-1].getName(),"log"):-1;
+                Util.getZxidFromName(files[files.length-1].getName(),LOG_FILE_PREFIX):-1;
 
         // if a log file is more recent we must scan it to find
         // the highest zxid
@@ -339,6 +332,9 @@ public class FileTxnLog implements TxnLog {
                 long syncElapsedMS =
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startSyncNS);
                 if (syncElapsedMS > fsyncWarningThresholdMS) {
+                    if(serverStats != null) {
+                        serverStats.incrementFsyncThresholdExceedCount();
+                    }
                     LOG.warn("fsync-ing the write ahead log in "
                             + Thread.currentThread().getName()
                             + " took " + syncElapsedMS
@@ -542,13 +538,13 @@ public class FileTxnLog implements TxnLog {
          */
         void init() throws IOException {
             storedFiles = new ArrayList<File>();
-            List<File> files = Util.sortDataDir(FileTxnLog.getLogFiles(logDir.listFiles(), 0), "log", false);
+            List<File> files = Util.sortDataDir(FileTxnLog.getLogFiles(logDir.listFiles(), 0), LOG_FILE_PREFIX, false);
             for (File f: files) {
-                if (Util.getZxidFromName(f.getName(), "log") >= zxid) {
+                if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) >= zxid) {
                     storedFiles.add(f);
                 }
                 // add the last logfile that is less than the zxid
-                else if (Util.getZxidFromName(f.getName(), "log") < zxid) {
+                else if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) < zxid) {
                     storedFiles.add(f);
                     break;
                 }

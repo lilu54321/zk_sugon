@@ -97,6 +97,7 @@ public class ZooKeeper {
         Environment.logEnv("Client environment:", LOG);
     }
 
+
     public ZooKeeperSaslClient getSaslClient() {
         return cnxn.zooKeeperSaslClient;
     }
@@ -212,7 +213,7 @@ public class ZooKeeper {
                 synchronized (existWatches) {
                     Set<Watcher> list = existWatches.remove(clientPath);
                     if (list != null) {
-                        addTo(existWatches.remove(clientPath), result);
+                        addTo(list, result);
                         LOG.warn("We are triggering an exists watch for delete! Shouldn't happen!");
                     }
                 }
@@ -593,6 +594,11 @@ public class ZooKeeper {
                 getClientCnxnSocket(), sessionId, sessionPasswd, canBeReadOnly);
         cnxn.seenRwServerBefore = true; // since user has provided sessionId
         cnxn.start();
+    }
+
+    // VisibleForTesting
+    public Testable getTestable() {
+        return new ZooKeeperTestable(this, cnxn);
     }
 
     /**

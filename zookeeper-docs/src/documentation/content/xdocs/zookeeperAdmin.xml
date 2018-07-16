@@ -511,10 +511,14 @@ server.3=zoo3:2888:3888</programlisting>
           of the znodes stored by a particular serving ensemble. These
           are the snapshot and transactional log files. As changes are
           made to the znodes these changes are appended to a
-          transaction log, occasionally, when a log grows large, a
+          transaction log. Occasionally, when a log grows large, a
           snapshot of the current state of all znodes will be written
-          to the filesystem. This snapshot supercedes all previous
-          logs.
+          to the filesystem and a new transaction log file is created
+          for future transactions. During snapshotting, ZooKeeper may
+          continue appending incoming transactions to the old log file.
+          Therefore, some transactions which are newer than a snapshot
+          may be found in the last transaction log preceding the
+          snapshot.
         </para>
 
         <para>A ZooKeeper server <emphasis role="bold">will not remove
@@ -1574,6 +1578,7 @@ zk_synced_followers 4               - only exposed by the Leader
 zk_pending_syncs    0               - only exposed by the Leader
 zk_open_file_descriptor_count 23    - only available on Unix platforms
 zk_max_file_descriptor_count 1024   - only available on Unix platforms
+zk_fsync_threshold_exceed_count	0
 </programlisting>
 
           <para>The output is compatible with java properties format and the content 
@@ -1656,8 +1661,11 @@ imok
         <para>The Log Directory contains the ZooKeeper transaction logs.
         Before any update takes place, ZooKeeper ensures that the transaction
         that represents the update is written to non-volatile storage. A new
-        log file is started each time a snapshot is begun. The log file's
-        suffix is the first zxid written to that log.</para>
+        log file is started when the number of transactions written to the
+        current log file reaches a (variable) threshold. The threshold is
+        computed using the same parameter which influences the frequency of
+        snapshotting (see snapCount above). The log file's suffix is the first
+        zxid written to that log.</para>
       </section>
 
       <section id="sc_filemanagement">
@@ -1677,8 +1685,12 @@ imok
         <para>The ZooKeeper server creates snapshot and log files, but
         never deletes them. The retention policy of the data and log
         files is implemented outside of the ZooKeeper server. The
-        server itself only needs the latest complete fuzzy snapshot
-        and the log files from the start of that snapshot. See the
+        server itself only needs the latest complete fuzzy snapshot, all log
+        files following it, and the last log file preceding it.  The latter
+        requirement is necessary to include updates which happened after this
+        snapshot was started but went into the existing log file at that time.
+        This is possible because snapshotting and rolling over of logs
+        proceed somewhat independently in ZooKeeper. See the
         <ulink url="#sc_maintenance">maintenance</ulink> section in
         this document for more details on setting a retention policy
         and maintenance of ZooKeeper storage.
@@ -1690,6 +1702,76 @@ imok
         ZooKeeper (e.g., control access to the files) and depend on the
         individual settings in which it is being deployed. </para>
         </note>
+      </section>
+
+      <section>
+        <title>Recovery - TxnLogToolkit</title>
+
+        <para>TxnLogToolkit is a command line tool shipped with ZooKeeper which
+          is capable of recovering transaction log entries with broken CRC.</para>
+        <para>Running it without any command line parameters or with the "-h,--help"
+          argument, it outputs the following help page:</para>
+
+        <programlisting>
+          $ bin/zkTxnLogToolkit.sh
+
+          usage: TxnLogToolkit [-dhrv] txn_log_file_name
+          -d,--dump      Dump mode. Dump all entries of the log file. (this is the default)
+          -h,--help      Print help message
+          -r,--recover   Recovery mode. Re-calculate CRC for broken entries.
+          -v,--verbose   Be verbose in recovery mode: print all entries, not just fixed ones.
+          -y,--yes       Non-interactive mode: repair all CRC errors without asking
+        </programlisting>
+
+        <para>The default behaviour is safe: it dumps the entries of the given
+        transaction log file to the screen: (same as using '-d,--dump' parameter)</para>
+
+        <programlisting>
+          $ bin/zkTxnLogToolkit.sh log.100000001
+          ZooKeeper Transactional Log File with dbid 0 txnlog format version 2
+          4/5/18 2:15:58 PM CEST session 0x16295bafcc40000 cxid 0x0 zxid 0x100000001 createSession 30000
+          <emphasis role="bold">CRC ERROR - 4/5/18 2:16:05 PM CEST session 0x16295bafcc40000 cxid 0x1 zxid 0x100000002 closeSession null</emphasis>
+          4/5/18 2:16:05 PM CEST session 0x16295bafcc40000 cxid 0x1 zxid 0x100000002 closeSession null
+          4/5/18 2:16:12 PM CEST session 0x26295bafcc90000 cxid 0x0 zxid 0x100000003 createSession 30000
+          4/5/18 2:17:34 PM CEST session 0x26295bafcc90000 cxid 0x0 zxid 0x200000001 closeSession null
+          4/5/18 2:17:34 PM CEST session 0x16295bd23720000 cxid 0x0 zxid 0x200000002 createSession 30000
+          4/5/18 2:18:02 PM CEST session 0x16295bd23720000 cxid 0x2 zxid 0x200000003 create '/andor,#626262,v{s{31,s{'world,'anyone}}},F,1
+          EOF reached after 6 txns.
+        </programlisting>
+
+        <para>There's a CRC error in the 2nd entry of the above transaction log file. In <emphasis role="bold">dump</emphasis>
+          mode, the toolkit only prints this information to the screen without touching the original file. In
+          <emphasis role="bold">recovery</emphasis> mode (-r,--recover flag) the original file still remains
+          untouched and all transactions will be copied over to a new txn log file with ".fixed" suffix. It recalculates
+          CRC values and copies the calculated value, if it doesn't match the original txn entry.
+          By default, the tool works interactively: it asks for confirmation whenever CRC error encountered.</para>
+
+        <programlisting>
+          $ bin/zkTxnLogToolkit.sh -r log.100000001
+          ZooKeeper Transactional Log File with dbid 0 txnlog format version 2
+          CRC ERROR - 4/5/18 2:16:05 PM CEST session 0x16295bafcc40000 cxid 0x1 zxid 0x100000002 closeSession null
+          Would you like to fix it (Yes/No/Abort) ?
+        </programlisting>
+
+        <para>Answering <emphasis role="bold">Yes</emphasis> means the newly calculated CRC value will be outputted
+          to the new file. <emphasis role="bold">No</emphasis> means that the original CRC value will be copied over.
+          <emphasis role="bold">Abort</emphasis> will abort the entire operation and exits.
+          (In this case the ".fixed" will not be deleted and left in a half-complete state: contains only entries which
+          have already been processed or only the header if the operation was aborted at the first entry.)</para>
+
+        <programlisting>
+          $ bin/zkTxnLogToolkit.sh -r log.100000001
+          ZooKeeper Transactional Log File with dbid 0 txnlog format version 2
+          CRC ERROR - 4/5/18 2:16:05 PM CEST session 0x16295bafcc40000 cxid 0x1 zxid 0x100000002 closeSession null
+          Would you like to fix it (Yes/No/Abort) ? y
+          EOF reached after 6 txns.
+          Recovery file log.100000001.fixed has been written with 1 fixed CRC error(s)
+        </programlisting>
+
+        <para>The default behaviour of recovery is to be silent: only entries with CRC error get printed to the screen.
+          One can turn on verbose mode with the -v,--verbose parameter to see all records.
+          Interactive mode can be turned off with the -y,--yes parameter. In this case all CRC errors will be fixed
+          in the new transaction file.</para>
       </section>
     </section>
 
