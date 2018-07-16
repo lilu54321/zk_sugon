@@ -203,6 +203,128 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 
+        Release Notes - ZooKeeper - Version 3.4.13
+    
+<h2>        Sub-task
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2980'>ZOOKEEPER-2980</a>] -         Backport ZOOKEEPER-2939 Deal with maxbuffer as it relates to proposals
+</li>
+</ul>
+        
+<h2>        Bug
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2184'>ZOOKEEPER-2184</a>] -         Zookeeper Client should re-resolve hosts when connection attempts fail
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2920'>ZOOKEEPER-2920</a>] -         Upgrade OWASP Dependency Check to 3.2.1
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2959'>ZOOKEEPER-2959</a>] -         ignore accepted epoch and LEADERINFO ack from observers when a newly elected leader computes new epoch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2988'>ZOOKEEPER-2988</a>] -         NPE triggered if server receives a vote for a server id not in their voting view
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2993'>ZOOKEEPER-2993</a>] -         .ignore file prevents adding src/java/main/org/apache/jute/compiler/generated dir to git repo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3007'>ZOOKEEPER-3007</a>] -         Potential NPE in ReferenceCountedACLCache#deserialize 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3027'>ZOOKEEPER-3027</a>] -         Accidently removed public API of FileTxnLog.setPreallocSize()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3039'>ZOOKEEPER-3039</a>] -         TxnLogToolkit uses Scanner badly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3041'>ZOOKEEPER-3041</a>] -         Typo in error message, affects log analysis
+</li>
+</ul>
+        
+<h2>        New Feature
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2994'>ZOOKEEPER-2994</a>] -         Tool required to recover log and snapshot entries with CRC errors
+</li>
+</ul>
+        
+<h2>        Improvement
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3012'>ZOOKEEPER-3012</a>] -         Fix unit test: testDataDirAndDataLogDir should not use hardcode test folders
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3019'>ZOOKEEPER-3019</a>] -         Add a metric to track number of slow fsyncs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-3043'>ZOOKEEPER-3043</a>] -         QuorumKerberosHostBasedAuthTest fails on Linux box: Unable to parse:includedir /etc/krb5.conf.d/
+</li>
+</ul>
+    
+<h2>        Test
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2415'>ZOOKEEPER-2415</a>] -         SessionTest is using Thread deprecated API.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2955'>ZOOKEEPER-2955</a>] -         Enable Clover code coverage report
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2968'>ZOOKEEPER-2968</a>] -         Add C client code coverage tests
+</li>
+</ul>
+                                                                                                                                            
+
+        Release Notes - ZooKeeper - Version 3.4.12
+
+<h2>        Bug
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2249'>ZOOKEEPER-2249</a>] -         CRC check failed when preAllocSize smaller than node data
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2690'>ZOOKEEPER-2690</a>] -         Update documentation source for ZOOKEEPER-2574
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2806'>ZOOKEEPER-2806</a>] -         Flaky test: org.apache.zookeeper.server.quorum.FLEBackwardElectionRoundTest.testBackwardElectionRound
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2845'>ZOOKEEPER-2845</a>] -         Data inconsistency issue due to retain database in leader election
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2893'>ZOOKEEPER-2893</a>] -         very poor choice of logging if client fails to connect to server
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2923'>ZOOKEEPER-2923</a>] -         The comment of the variable matchSyncs in class CommitProcessor has a mistake.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2924'>ZOOKEEPER-2924</a>] -         Flaky Test: org.apache.zookeeper.test.LoadFromLogTest.testRestoreWithTransactionErrors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2931'>ZOOKEEPER-2931</a>] -         WriteLock recipe: incorrect znode ordering when the sessionId is part of the znode name
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2936'>ZOOKEEPER-2936</a>] -         Duplicate Keys in log4j.properties config files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2944'>ZOOKEEPER-2944</a>] -         Specify correct overflow value
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2948'>ZOOKEEPER-2948</a>] -         Failing c unit tests on apache jenkins
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2951'>ZOOKEEPER-2951</a>] -         zkServer.cmd does not start when JAVA_HOME ends with a \
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2953'>ZOOKEEPER-2953</a>] -         Flaky Test: testNoLogBeforeLeaderEstablishment
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2960'>ZOOKEEPER-2960</a>] -         The dataDir and dataLogDir are used opposingly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2961'>ZOOKEEPER-2961</a>] -         Fix testElectionFraud Flakyness
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2978'>ZOOKEEPER-2978</a>] -         fix potential null pointer exception when deleting node
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2992'>ZOOKEEPER-2992</a>] -         The eclipse build target fails due to protocol redirection: http-&gt;https
+</li>
+</ul>
+
+<h2>        Improvement
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2950'>ZOOKEEPER-2950</a>] -         Add keys for the Zxid from the stat command to check_zookeeper.py
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2952'>ZOOKEEPER-2952</a>] -         Upgrade third party libraries to address vulnerabilities
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2962'>ZOOKEEPER-2962</a>] -         The function queueEmpty() in FastLeaderElection.Messenger is not used, should be removed.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2967'>ZOOKEEPER-2967</a>] -         Add check to validate dataDir and dataLogDir parameters at startup
+</li>
+</ul>
+
+<h2>        Wish
+</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/ZOOKEEPER-2795'>ZOOKEEPER-2795</a>] -         Change log level for &quot;ZKShutdownHandler is not registered&quot; error message
+</li>
+</ul>
         Release Notes - ZooKeeper - Version 3.4.11
     
 <h2>        Sub-task

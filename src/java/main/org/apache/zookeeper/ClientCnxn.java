@@ -27,6 +27,8 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -987,18 +989,10 @@ public class ClientCnxn {
         // throws a LoginException: see startConnect() below.
         private boolean saslLoginFailed = false;
 
-        private void startConnect() throws IOException {
+        private void startConnect(InetSocketAddress addr) throws IOException {
             // initializing it for new connection
             saslLoginFailed = false;
             state = States.CONNECTING;
-
-            InetSocketAddress addr;
-            if (rwServerAddress != null) {
-                addr = rwServerAddress;
-                rwServerAddress = null;
-            } else {
-                addr = hostProvider.next(1000);
-            }
 
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
@@ -1046,6 +1040,7 @@ public class ClientCnxn {
             int to;
             long lastPingRwServer = Time.currentElapsedTime();
             final int MAX_SEND_PING_INTERVAL = 10000; //10 seconds
+            InetSocketAddress serverAddress = null;
             while (state.isAlive()) {
                 try {
                     if (!clientCnxnSocket.isConnected()) {
@@ -1060,7 +1055,13 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
-                        startConnect();
+                        if (rwServerAddress != null) {
+                            serverAddress = rwServerAddress;
+                            rwServerAddress = null;
+                        } else {
+                            serverAddress = hostProvider.next(1000);
+                        }
+                        startConnect(serverAddress);
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
@@ -1161,14 +1162,14 @@ public class ClientCnxn {
                             LOG.info(e.getMessage() + RETRY_CONN_MSG);
                         } else if (e instanceof RWServerFoundException) {
                             LOG.info(e.getMessage());
+                        } else if (e instanceof SocketException) {
+                            LOG.info("Socket error occurred: {}: {}", serverAddress, e.getMessage());
                         } else {
-                            LOG.warn(
-                                    "Session 0x"
-                                            + Long.toHexString(getSessionId())
-                                            + " for server "
-                                            + clientCnxnSocket.getRemoteSocketAddress()
-                                            + ", unexpected error"
-                                            + RETRY_CONN_MSG, e);
+                            LOG.warn("Session 0x{} for server {}, unexpected error{}",
+                                            Long.toHexString(getSessionId()),
+                                            serverAddress,
+                                            RETRY_CONN_MSG,
+                                            e);
                         }
                         cleanup();
                         if (state.isAlive()) {
@@ -1193,7 +1194,7 @@ public class ClientCnxn {
                            + Long.toHexString(getSessionId()));
         }
 
-        private void pingRwServer() throws RWServerFoundException {
+        private void pingRwServer() throws RWServerFoundException, UnknownHostException {
             String result = null;
             InetSocketAddress addr = hostProvider.next(0);
             LOG.info("Checking server " + addr + " for being r/w." +
@@ -1388,7 +1389,8 @@ public class ClientCnxn {
 
     private int xid = 1;
 
-    private volatile States state = States.NOT_CONNECTED;
+    // @VisibleForTesting
+    volatile States state = States.NOT_CONNECTED;
 
     /*
      * getXid() is called externally by ClientCnxnNIO::doIO() when packets are sent from the outgoingQueue to

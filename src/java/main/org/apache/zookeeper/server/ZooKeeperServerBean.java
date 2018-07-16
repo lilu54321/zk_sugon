@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Date;
 
+import org.apache.jute.BinaryInputArchive;
 import org.apache.zookeeper.Version;
 import org.apache.zookeeper.jmx.ZKMBeanInfo;
 
@@ -126,6 +127,10 @@ public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
     public long getPacketsSent() {
         return zks.serverStats().getPacketsSent();
     }
+
+    public long getFsyncThresholdExceedCount() {
+        return zks.serverStats().getFsyncThresholdExceedCount();
+    }
     
     public void resetLatency() {
         zks.serverStats().resetLatency();
@@ -135,13 +140,23 @@ public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
         zks.serverStats().resetMaxLatency();
     }
 
+    public void resetFsyncThresholdExceedCount() {
+        zks.serverStats().resetFsyncThresholdExceedCount();
+    }
+
     public void resetStatistics() {
         ServerStats serverStats = zks.serverStats();
         serverStats.resetRequestCounters();
         serverStats.resetLatency();
+        serverStats.resetFsyncThresholdExceedCount();
     }
 
     public long getNumAliveConnections() {
         return zks.getNumAliveConnections();
+    }
+
+    @Override
+    public int getJuteMaxBufferSize() {
+        return BinaryInputArchive.maxBuffer;
     }
 }
