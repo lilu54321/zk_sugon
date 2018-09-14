@@ -1190,7 +1190,7 @@ void free_completions(zhandle_t *zh,int callCompletion,int reason)
     struct ReplyHeader h;
     void_completion_t auth_completion = NULL;
     auth_completion_list_t a_list, *a_tmp;
-
+    
     if (lock_completion_list(&zh->sent_requests) == 0) {
         tmp_list = zh->sent_requests;
         zh->sent_requests.head = 0;
@@ -1226,6 +1226,8 @@ void free_completions(zhandle_t *zh,int callCompletion,int reason)
             }
         }
     }
+    
+    
     if (zoo_lock_auth(zh) == 0) {
         a_list.completion = NULL;
         a_list.next = NULL;
@@ -1259,6 +1261,72 @@ static void cleanup_bufs(zhandle_t *zh,int callCompletion,int rc)
     }
 }
 
+static void update_connect_index(zhandle_t *zh)
+{
+    int rc = 0;
+    int i = 0;
+    int cur_index = zh->connect_index;
+    struct timeval tv;
+    long timeout_ms = 200;
+    int fd = 0;
+    int enable_tcp_nodelay = 1;
+
+    tv.tv_sec  = timeout_ms / 1000;
+    tv.tv_usec = timeout_ms % 1000 * 1000;
+    
+    // Update connect index to a reachable host.
+    for (i = 0; i < zh->addrs_count; ++i) {
+        cur_index = (cur_index + 1) % zh->addrs_count;
+        fd = socket(zh->addrs[cur_index].ss_family, SOCK_STREAM, 0);
+        if (fd < 0) 
+        {
+            LOG_WARN(("failed to create socket\n"));
+            goto l_failed;
+        }
+        
+        rc = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+        if (rc < 0)
+        {
+            LOG_WARN(("setsockopt failed\n"));
+            close(fd);
+            goto l_failed;
+        }
+        rc = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable_tcp_nodelay, sizeof(enable_tcp_nodelay));
+        if (rc < 0)
+        {
+            LOG_WARN(("setsockopt failed\n"));
+            close(fd);
+            goto l_failed;
+        }
+        if (zh->addrs[cur_index].ss_family == AF_INET6) {
+            rc = connect(fd, (struct sockaddr*) &zh->addrs[cur_index], sizeof(struct sockaddr_in6));
+        } else {
+            rc = connect(fd, (struct sockaddr*) &zh->addrs[cur_index], sizeof(struct sockaddr_in));
+        }
+        if (rc >= 0) {
+            close(fd);
+            LOG_INFO(("[%s] is reachable\n",
+                format_endpoint_info(&zh->addrs[cur_index])));
+            zh->connect_index = cur_index;
+            goto l_out;
+        }
+        LOG_INFO(("[%s] may be unreachable\n",
+            format_endpoint_info(&zh->addrs[cur_index])));
+        close(fd);
+        continue;
+    }
+
+    LOG_WARN(("failed to check IP addresses\n"));
+
+    goto l_failed;
+
+l_out:
+    return;
+
+l_failed:
+    zh->connect_index++;
+}
+
 static void handle_error(zhandle_t *zh,int rc)
 {
     close(zh->fd);
@@ -1272,7 +1340,8 @@ static void handle_error(zhandle_t *zh,int rc)
     }
     cleanup_bufs(zh,1,rc);
     zh->fd = -1;
-    zh->connect_index++;
+    LOG_INFO(("update connect index\n"));
+    update_connect_index(zh);
     if (!is_unrecoverable(zh)) {
         zh->state = 0;
     }
@@ -2548,7 +2617,6 @@ int zookeeper_close(zhandle_t *zh)
         enter_critical(zh);
         free_completions(zh,1,ZCLOSING);
         leave_critical(zh);
-
         adaptor_finish(zh);
         /* Now we can allow the handle to be cleaned up, if the completion
          * threads finished during the adaptor_finish call. */
@@ -3530,6 +3598,7 @@ int zoo_create(zhandle_t *zh, const char *path, const char *value,
     if (!sc) {
         return ZSYSTEMERROR;
     }
+    LOG_INFO("The %s (%p) start\n", __FUNCTION__ , sc);
     sc->u.str.str = path_buffer;
     sc->u.str.str_len = path_buffer_len;
     rc=zoo_acreate(zh, path, value, valuelen, acl, flags, SYNCHRONOUS_MARKER, sc);
@@ -3600,7 +3669,6 @@ int zoo_wget(zhandle_t *zh, const char *path,
         return ZBADARGUMENTS;
     if((sc=alloc_sync_completion())==NULL)
         return ZSYSTEMERROR;
-
     sc->u.data.buffer = buffer;
     sc->u.data.buff_len = *buffer_len;
     rc=zoo_awget(zh, path, watcher, watcherCtx, SYNCHRONOUS_MARKER, sc);
