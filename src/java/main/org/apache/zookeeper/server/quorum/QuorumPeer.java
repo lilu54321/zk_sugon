@@ -19,10 +19,12 @@ package org.apache.zookeeper.server.quorum;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -977,6 +979,24 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case FOLLOWING:
                     try {
                         LOG.info("FOLLOWING");
+                        String followerNotify = System.getProperty("zookeeper.beforeFollowerNotify");
+                        if (followerNotify != null) {
+                            Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", followerNotify});
+                            ByteArrayOutputStream eos = new ByteArrayOutputStream();
+                            InputStream is = p.getErrorStream();
+                            byte[] buf = new byte[1024];
+                            int len;
+                            while ((len = is.read(buf)) != -1) {
+                                eos.write(buf, 0, len);
+                            }
+                            p.waitFor();
+                            if (p.exitValue() != 0) {
+                                LOG.error("notify failed:{}", eos.toString("UTF-8"));
+                                p.destroy();
+                                System.exit(1);
+                            }
+                            p.destroy();
+                        }
                         setFollower(makeFollower(logFactory));
                         follower.followLeader();
                     } catch (Exception e) {
