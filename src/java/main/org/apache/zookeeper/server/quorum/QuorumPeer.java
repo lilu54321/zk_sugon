@@ -537,9 +537,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
     }
 
+    private ServerState oldState = ServerState.LOOKING;
     private ServerState state = ServerState.LOOKING;
 
     public synchronized void setPeerState(ServerState newState){
+        if (state != ServerState.LOOKING) {
+            oldState = state;
+        }
         state=newState;
     }
 
@@ -979,23 +983,25 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case FOLLOWING:
                     try {
                         LOG.info("FOLLOWING");
-                        String followerNotify = System.getProperty("zookeeper.beforeFollowerNotify");
-                        if (followerNotify != null) {
-                            Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", followerNotify});
-                            ByteArrayOutputStream eos = new ByteArrayOutputStream();
-                            InputStream is = p.getErrorStream();
-                            byte[] buf = new byte[1024];
-                            int len;
-                            while ((len = is.read(buf)) != -1) {
-                                eos.write(buf, 0, len);
-                            }
-                            p.waitFor();
-                            if (p.exitValue() != 0) {
-                                LOG.error("notify failed:{}", eos.toString("UTF-8"));
+                        if (oldState != ServerState.FOLLOWING) {
+                            String followerNotify = System.getProperty("zookeeper.beforeFollowerNotify");
+                            if (followerNotify != null) {
+                                Process p = Runtime.getRuntime().exec(new String[] {"sh", "-c", followerNotify});
+                                ByteArrayOutputStream eos = new ByteArrayOutputStream();
+                                InputStream is = p.getErrorStream();
+                                byte[] buf = new byte[1024];
+                                int len;
+                                while ((len = is.read(buf)) != -1) {
+                                    eos.write(buf, 0, len);
+                                }
+                                p.waitFor();
+                                if (p.exitValue() != 0) {
+                                    LOG.error("notify failed:{}", eos.toString("UTF-8"));
+                                    p.destroy();
+                                    System.exit(1);
+                                }
                                 p.destroy();
-                                System.exit(1);
                             }
-                            p.destroy();
                         }
                         setFollower(makeFollower(logFactory));
                         follower.followLeader();
