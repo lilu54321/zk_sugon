@@ -144,7 +144,21 @@ public class LearnerHandler extends ZooKeeperThread {
                 return true;
             } else {
                 long msDelay = (time - currentTime) / 1000000;
-                return (msDelay < (leader.self.tickTime * leader.self.syncLimit));
+                // if proposalLimit is defined, use it instead of syncLimit.
+                int proposalLimit = leader.self.syncLimit;
+                String proposalLimitValue = System.getProperty("zookeeper.proposalLimit");
+                if (proposalLimitValue != null) {
+                    try {
+                        proposalLimit = Integer.parseInt(proposalLimitValue);
+                        if (proposalLimit < 0) {
+                            proposalLimit = leader.self.syncLimit;
+                        }
+                    } catch (NumberFormatException e) {
+                        LOG.error("{} is not a valid number", proposalLimitValue);
+                    }
+                }
+
+                return (msDelay < (leader.self.tickTime * proposalLimit));
             }
         }
     };
