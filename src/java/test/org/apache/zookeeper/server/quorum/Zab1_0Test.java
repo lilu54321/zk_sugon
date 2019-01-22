@@ -357,7 +357,7 @@ public class Zab1_0Test {
             Assert.assertTrue(zxid > ZxidUtils.makeZxid(1, 0));
             
             // Generate snapshot and close files.
-            snapLog.save(zkDb.getDataTree(), zkDb.getSessionWithTimeOuts());
+            snapLog.save(zkDb.getDataTree(), zkDb.getSessionWithTimeOuts(), false);
             snapLog.close();
             
             QuorumPeer peer = createQuorumPeer(tmpDir);
@@ -642,7 +642,7 @@ public class Zab1_0Test {
                     Assert.assertEquals(1, f.self.getAcceptedEpoch());
                     Assert.assertEquals(1, f.self.getCurrentEpoch());
                     //Make sure that we did take the snapshot now
-                    verify(f.zk).takeSnapshot();
+                    verify(f.zk).takeSnapshot(true);
                     Assert.assertEquals(firstZxid, f.fzk.getLastProcessedZxid());
                     
                     // Make sure the data was recorded in the filesystem ok

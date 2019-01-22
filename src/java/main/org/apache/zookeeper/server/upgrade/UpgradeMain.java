@@ -164,7 +164,7 @@ public class UpgradeMain {
         FileTxnSnapLog filesnapLog = new FileTxnSnapLog(dataDir, 
                 snapShotDir);
         LOG.info("snapshotting the new datatree");
-        filesnapLog.save(dt, upgrade.getSessionWithTimeOuts());
+        filesnapLog.save(dt, upgrade.getSessionWithTimeOuts(), true);
         //done saving.
         LOG.info("Upgrade is complete");
     }

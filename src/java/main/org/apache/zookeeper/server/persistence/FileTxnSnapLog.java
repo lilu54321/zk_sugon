@@ -291,16 +291,18 @@ public class FileTxnSnapLog {
      * @param dataTree the datatree to be serialized onto disk
      * @param sessionsWithTimeouts the sesssion timeouts to be
      * serialized onto disk
+     * @param syncSnap sync the snapshot immediately after write
      * @throws IOException
      */
     public void save(DataTree dataTree,
-            ConcurrentHashMap<Long, Integer> sessionsWithTimeouts)
+            ConcurrentHashMap<Long, Integer> sessionsWithTimeouts,
+            boolean syncSnap)
         throws IOException {
         long lastZxid = dataTree.lastProcessedZxid;
         File snapshotFile = new File(snapDir, Util.makeSnapshotName(lastZxid));
         LOG.info("Snapshotting: 0x{} to {}", Long.toHexString(lastZxid),
                 snapshotFile);
-        snapLog.serialize(dataTree, sessionsWithTimeouts, snapshotFile);
+        snapLog.serialize(dataTree, sessionsWithTimeouts, snapshotFile, syncSnap);
         
     }
 
