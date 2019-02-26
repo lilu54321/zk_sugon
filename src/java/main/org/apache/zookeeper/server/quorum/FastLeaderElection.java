@@ -928,6 +928,7 @@ public class FastLeaderElection implements Election {
                          * Consider all notifications from the same epoch
                          * together.
                          */
+                        LOG.info("remote epoch:{}, local epoch:{}", n.electionEpoch, logicalclock.get());
                         if(n.electionEpoch == logicalclock.get()){
                             recvset.put(n.sid, new Vote(n.leader,
                                                           n.zxid,
@@ -945,6 +946,7 @@ public class FastLeaderElection implements Election {
                                 leaveInstance(endVote);
                                 return endVote;
                             }
+                            LOG.info("Leader not found yet.");
                         }
 
                         /*
@@ -971,6 +973,7 @@ public class FastLeaderElection implements Election {
                             leaveInstance(endVote);
                             return endVote;
                         }
+                        LOG.info("Leader not found yet.");
                         break;
                     default:
                         LOG.warn("Notification state unrecognized: {} (n.state), {} (n.sid)",
