@@ -224,13 +224,14 @@ public class Learner {
             throws IOException, ConnectException, InterruptedException {
         sock = new Socket();        
         sock.setSoTimeout(self.tickTime * self.initLimit);
-        for (int tries = 0; tries < 5; tries++) {
+        // Reduce the number of reties to fail fast.
+        for (int tries = 0; tries < 1; tries++) {
             try {
                 sock.connect(addr, self.tickTime * self.syncLimit);
                 sock.setTcpNoDelay(nodelay);
                 break;
             } catch (IOException e) {
-                if (tries == 4) {
+                if (tries == 0) {
                     LOG.error("Unexpected exception",e);
                     throw e;
                 } else {
