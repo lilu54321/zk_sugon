@@ -253,12 +253,12 @@ public class QuorumCnxManager {
     }
 
     private Socket openChannel(long sid, InetSocketAddress electionAddr) {
-        LOG.debug("Opening channel to server " + sid);
+        LOG.info("Opening channel to server " + sid);
         try {
             final Socket sock = new Socket();
             setSockOpts(sock);
             sock.connect(electionAddr, cnxTO);
-            LOG.debug("Connected to server " + sid);
+            LOG.info("Connected to server " + sid);
             return sock;
         } catch (UnresolvedAddressException e) {
             // Sun doesn't include the address that causes this
@@ -351,6 +351,7 @@ public class QuorumCnxManager {
         public synchronized void run() {
             InetSocketAddress electionAddr;
             if (view.containsKey(sid)) {
+                view.get(sid).recreateSocketAddresses();
                 electionAddr = view.get(sid).electionAddr;
             } else {
                 LOG.warn("Invalid server id: " + sid);
