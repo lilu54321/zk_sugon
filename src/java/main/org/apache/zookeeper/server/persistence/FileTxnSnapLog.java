@@ -200,6 +200,7 @@ public class FileTxnSnapLog {
                 hdr = itr.getHeader();
                 if (hdr == null) {
                     //empty logs 
+                    LOG.info("empty logs");
                     return dt.lastProcessedZxid;
                 }
                 if (hdr.getZxid() < highestZxid && highestZxid != 0) {

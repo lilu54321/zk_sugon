@@ -529,6 +529,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 try {
                     //This will fast forward the database to the latest recorded transactions
                     zkDb.fastForwardDataBase();
+                    LOG.info("fastforward finish");
                 } catch (IOException e) {
                     LOG.error("Error updating DB", e);
                     zkDb.clear();
