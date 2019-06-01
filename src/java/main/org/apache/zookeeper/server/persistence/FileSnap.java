@@ -229,7 +229,7 @@ public class FileSnap implements SnapShot {
     public synchronized void serialize(DataTree dt, Map<Long, Integer> sessions, File snapShot, boolean fsync)
             throws IOException {
         if (!close) {
-            OutputStream sessOS = new BufferedOutputStream(fsync ? new AtomicFileOutputStream(snapShot) : 
+            OutputStream sessOS = new BufferedOutputStream(fsync ? AtomicFileOutputStream.create(snapShot) : 
                                                                    new FileOutputStream(snapShot));
             CheckedOutputStream crcOut = new CheckedOutputStream(sessOS, new Adler32());
             //CheckedOutputStream cout = new CheckedOutputStream()

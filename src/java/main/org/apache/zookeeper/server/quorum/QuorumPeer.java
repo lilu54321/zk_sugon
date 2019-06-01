@@ -1409,7 +1409,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 	 */
     private void writeLongToFile(String name, long value) throws IOException {
         File file = new File(logFactory.getSnapDir(), name);
-        AtomicFileOutputStream out = new AtomicFileOutputStream(file);
+        AtomicFileOutputStream out = AtomicFileOutputStream.create(file);
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out));
         boolean aborted = false;
         try {

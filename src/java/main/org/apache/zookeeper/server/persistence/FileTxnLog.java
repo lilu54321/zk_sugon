@@ -319,9 +319,16 @@ public class FileTxnLog implements TxnLog {
      * disk
      */
     public synchronized void commit() throws IOException {
-        if (logStream != null) {
-            logStream.flush();
-        }
+        try {
+	    if (logStream != null) {
+	        logStream.flush();
+	    }
+    	} catch (IOException e) {
+            // Let ZooKeeper exit, otherwise it may cause more problems, such as infinite elections.
+            LOG.error(e.getMessage());
+            System.exit(1);
+    	    throw e;
+    	}
         for (FileOutputStream log : streamsToFlush) {
             log.flush();
             if (forceSync) {

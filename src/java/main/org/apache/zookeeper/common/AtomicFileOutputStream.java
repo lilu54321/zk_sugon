@@ -52,6 +52,19 @@ public class AtomicFileOutputStream extends FilterOutputStream {
     private final File origFile;
     private final File tmpFile;
 
+    public static AtomicFileOutputStream create(File f) 
+            throws FileNotFoundException {
+        try {
+            AtomicFileOutputStream a = new AtomicFileOutputStream(f);
+            return a;
+        } catch (FileNotFoundException e) {
+            // Let ZooKeeper exit, otherwise it may cause more problems, such as infinite elections.
+            LOG.error(e.getMessage());
+            System.exit(1);
+            throw e;
+        }
+    }
+
     public AtomicFileOutputStream(File f) throws FileNotFoundException {
         // Code unfortunately must be duplicated below since we can't assign
         // anything
