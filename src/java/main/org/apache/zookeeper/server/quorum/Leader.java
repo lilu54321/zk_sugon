@@ -22,6 +22,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.BindException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -367,6 +371,32 @@ public class Leader {
     boolean waitingForNewEpoch = true;
     volatile boolean readyToStart = false;
     
+    void notifyByUdp() {
+        
+        Thread t = new Thread() {
+            public void run() {
+               DatagramSocket client = null;
+               try {
+                    int udpPort = Integer.parseInt(System.getProperty("zookeeper.udpPort"));
+                    byte[] msg = new String("imok").getBytes();
+                    client = new DatagramSocket();
+                    InetAddress inetAddr = InetAddress.getLoopbackAddress();
+                    SocketAddress socketAddr = new InetSocketAddress(inetAddr, udpPort);
+                    DatagramPacket sendPacket = new DatagramPacket(msg, msg.length, socketAddr);
+                    client.send(sendPacket);
+                    LOG.info("Send UDP success.");
+               } catch (Exception e) {
+                    LOG.warn(e.toString());
+               } finally {
+                   if (client != null) {
+                       client.close();
+                   }
+               }
+            }
+        };
+        t.start();
+    }
+
     /**
      * This method is main function that is called to lead
      * 
@@ -459,6 +489,8 @@ public class Leader {
             if (!System.getProperty("zookeeper.leaderServes", "yes").equals("no")) {
                 self.cnxnFactory.setZooKeeperServer(zk);
             }
+
+            notifyByUdp();
             // Everything is a go, simply start counting the ticks
             // WARNING: I couldn't find any wait statement on a synchronized
             // block that would be notified by this notifyAll() call, so

@@ -1409,7 +1409,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 	 */
     private void writeLongToFile(String name, long value) throws IOException {
         File file = new File(logFactory.getSnapDir(), name);
-        AtomicFileOutputStream out = new AtomicFileOutputStream(file);
+        AtomicFileOutputStream out = AtomicFileOutputStream.create(file);
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out));
         boolean aborted = false;
         try {
@@ -1448,14 +1448,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 	}
 	
 	public void setCurrentEpoch(long e) throws IOException {
-		currentEpoch = e;
 		writeLongToFile(CURRENT_EPOCH_FILENAME, e);
-		
+        currentEpoch = e;	
 	}
 	
 	public void setAcceptedEpoch(long e) throws IOException {
-		acceptedEpoch = e;
 		writeLongToFile(ACCEPTED_EPOCH_FILENAME, e);
+        acceptedEpoch = e;
 	}
 
     /**

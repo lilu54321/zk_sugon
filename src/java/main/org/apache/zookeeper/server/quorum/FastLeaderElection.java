@@ -71,6 +71,12 @@ public class FastLeaderElection implements Election {
     final static int maxNotificationInterval = 60000;
 
     /**
+     * Broadcast my vote if this server hasn't sent any notification in 
+     * maxSendIntervalMs time.
+     */
+    final static int maxSendIntervalMs = 50; 
+
+    /**
      * Connection manager. Fast leader election uses TCP for
      * communication between peers, and QuorumCnxManager manages
      * such connections.
@@ -367,8 +373,8 @@ public class FastLeaderElection implements Election {
                                  */
                                 Vote current = self.getCurrentVote();
                                 if(ackstate == QuorumPeer.ServerState.LOOKING){
-                                    if(LOG.isDebugEnabled()){
-                                        LOG.debug("Sending new notification. My id =  " +
+                                    if(LOG.isInfoEnabled()){
+                                        LOG.info("Sending new notification. My id =  " +
                                                 self.getId() + " recipient=" +
                                                 response.sid + " zxid=0x" +
                                                 Long.toHexString(current.getZxid()) +
@@ -542,8 +548,8 @@ public class FastLeaderElection implements Election {
     }
 
     private void leaveInstance(Vote v) {
-        if(LOG.isDebugEnabled()){
-            LOG.debug("About to leave FLE instance: leader="
+        if(LOG.isInfoEnabled()){
+            LOG.info("About to leave FLE instance: leader="
                 + v.getId() + ", zxid=0x" +
                 Long.toHexString(v.getZxid()) + ", my id=" + self.getId()
                 + ", my state=" + self.getPeerState());
@@ -565,6 +571,7 @@ public class FastLeaderElection implements Election {
         LOG.debug("FLE is down");
     }
 
+    private long lastSendTime = 0;
 
     /**
      * Send notifications to all peers upon a change in our vote
@@ -580,14 +587,15 @@ public class FastLeaderElection implements Election {
                     QuorumPeer.ServerState.LOOKING,
                     sid,
                     proposedEpoch);
-            if(LOG.isDebugEnabled()){
-                LOG.debug("Sending Notification: " + proposedLeader + " (n.leader), 0x"  +
+            if(LOG.isInfoEnabled()){
+                LOG.info("Sending Notification: " + proposedLeader + " (n.leader), 0x"  +
                       Long.toHexString(proposedZxid) + " (n.zxid), 0x" + Long.toHexString(logicalclock.get())  +
                       " (n.round), " + sid + " (recipient), " + self.getId() +
                       " (myid), 0x" + Long.toHexString(proposedEpoch) + " (n.peerEpoch)");
             }
             sendqueue.offer(notmsg);
         }
+        lastSendTime = Time.currentElapsedTime();
     }
 
 
@@ -824,6 +832,7 @@ public class FastLeaderElection implements Election {
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
                  */
+                LOG.info("wait for notification");   
                 Notification n = recvqueue.poll(notTimeout,
                         TimeUnit.MILLISECONDS);
 
@@ -876,6 +885,10 @@ public class FastLeaderElection implements Election {
                         } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                 proposedLeader, proposedZxid, proposedEpoch)) {
                             updateProposal(n.leader, n.zxid, n.peerEpoch);
+                            sendNotifications();
+                        }
+
+                        if (Time.currentElapsedTime() - lastSendTime > maxSendIntervalMs) {
                             sendNotifications();
                         }
 
