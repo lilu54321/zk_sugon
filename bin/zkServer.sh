@@ -206,6 +206,14 @@ status)
 	clientPortAddress="localhost"
     fi
     clientPort=`$GREP "^[[:space:]]*clientPort[^[:alpha:]]" "$ZOOCFG" | sed -e 's/.*=//'`
+    # prefer to use curl command tool via telnet protocol for getting zk server mode.
+    STAT=`which curl &>/dev/null && echo srvr | curl -s telnet://$clientPortAddress:$clientPort 2>/dev/null | $GREP Mode`
+    if [ "x$STAT" != "x" ]
+    then
+        echo $STAT
+        exit 0
+    fi
+
     STAT=`"$JAVA" "-Dzookeeper.log.dir=${ZOO_LOG_DIR}" "-Dzookeeper.root.logger=${ZOO_LOG4J_PROP}" \
              -cp "$CLASSPATH" $JVMFLAGS org.apache.zookeeper.client.FourLetterWordMain \
              $clientPortAddress $clientPort srvr 2> /dev/null    \
