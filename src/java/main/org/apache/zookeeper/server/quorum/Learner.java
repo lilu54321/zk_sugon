@@ -433,6 +433,10 @@ public class Learner {
                             LOG.warn("Committing " + qp.getZxid() + ", but next proposal is " + pif.hdr.getZxid());
                         } else {
                             zk.processTxn(pif.hdr, pif.rec);
+                            // do not add non quorum packets to the queue.
+                            if (Request.isQuorum(pif.hdr.getType())) {
+                                zk.getZKDatabase().addCommittedProposal(pif.hdr, pif.rec);
+                            }
                             packetsNotCommitted.remove();
                         }
                     } else {
