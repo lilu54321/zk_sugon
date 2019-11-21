@@ -647,7 +647,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     private void loadDataBase() {
         File updating = new File(getTxnFactory().getSnapDir(),
                                  UPDATING_EPOCH_FILENAME);
-		try {
+		File currentEpochTmp = new File(getTxnFactory().getSnapDir(),
+                CURRENT_EPOCH_FILENAME + AtomicFileOutputStream.TMP_EXTENSION);
+        try {
             zkDb.loadDataBase();
 
             // load the epochs
@@ -655,7 +657,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     		long epochOfZxid = ZxidUtils.getEpochFromZxid(lastProcessedZxid);
             try {
             	currentEpoch = readLongFromFile(CURRENT_EPOCH_FILENAME);
-                if (epochOfZxid > currentEpoch && updating.exists()) {
+                // currentEpochTmp可能不会被删除掉
+                if (epochOfZxid > currentEpoch && (updating.exists() || currentEpochTmp.exists())) {
                     LOG.info("{} found. The server was terminated after " +
                              "taking a snapshot but before updating current " +
                              "epoch. Setting current epoch to {}.",
