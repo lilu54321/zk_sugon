@@ -923,7 +923,7 @@ public class NIOServerCnxn extends ServerCnxn {
             return true;
         }
 
-        LOG.debug("Processing " + cmd + " command from "
+        LOG.info("Processing " + cmd + " command from "
                 + sock.socket().getRemoteSocketAddress());
 
         if (len == ruokCmd) {
@@ -1075,7 +1075,7 @@ public class NIOServerCnxn extends ServerCnxn {
             return;
         }
 
-        LOG.debug("Closed socket connection for client "
+        LOG.info("Closed socket connection for client "
                 + sock.socket().getRemoteSocketAddress()
                 + (sessionId != 0 ?
                         " which had sessionid 0x" + Long.toHexString(sessionId) :
