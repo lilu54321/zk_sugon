@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * place.
  */
 public class AtomicFileOutputStream extends FilterOutputStream {
-    public static final String TMP_EXTENSION = ".tmp";
+    private static final String TMP_EXTENSION = ".tmp";
 
     private final static Logger LOG = LoggerFactory
             .getLogger(AtomicFileOutputStream.class);
