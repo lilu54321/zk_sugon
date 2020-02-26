@@ -342,6 +342,13 @@ public class FileTxnLog implements TxnLog {
                     if(serverStats != null) {
                         serverStats.incrementFsyncThresholdExceedCount();
                     }
+                    DiskMonitorLog diskMonitorLog = DiskMonitorLog.getInstance();
+                    if (diskMonitorLog.isDiskPrintEnabled()) {
+                        if (!diskMonitorLog.isStarted()) {
+                            diskMonitorLog.start();
+                        }
+                        diskMonitorLog.wakeMeUp();
+                    }
                     LOG.warn("fsync-ing the write ahead log in "
                             + Thread.currentThread().getName()
                             + " took " + syncElapsedMS
