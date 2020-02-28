@@ -19,7 +19,7 @@ public class DiskMonitorLog extends ZooKeeperThread {
     private static final String DEFAULT_CHARSET_NAME = "UTF-8";
     private static final int PRINT_TIME = 30;
     private volatile boolean started = false;
-    private boolean diskPrintEnabled = false;
+    private boolean diskPrintEnabled = true;
     private static Semaphore semaphore = new Semaphore(0);
 
     private DiskMonitorLog() {
@@ -37,7 +37,7 @@ public class DiskMonitorLog extends ZooKeeperThread {
         try {
             String value = System.getProperty("zookeeper.diskPrintEnabled");
             if (value == null) {
-                diskPrintEnabled = false;
+                diskPrintEnabled = true;
                 return;
             }
             if (value.toLowerCase().equals("true")) {
@@ -48,11 +48,11 @@ public class DiskMonitorLog extends ZooKeeperThread {
                 LOG.error("Invalid option "
                         + value
                         + " for disk print enabled. Choose 'true' or 'false.'");
-                diskPrintEnabled = false;
+                diskPrintEnabled = true;
             }
         } catch (IllegalArgumentException e) {
             // for upgrade zk ,  parameter diskPrintEnabled is empty.
-            diskPrintEnabled = false;
+            diskPrintEnabled = true;
         }
     }
 
@@ -111,7 +111,7 @@ public class DiskMonitorLog extends ZooKeeperThread {
     }
 
     public void logIoTop() {
-        String cmd = "iotop -botq --iter=1";
+        String cmd = "iotop -botq --iter=3";
         ExecuteResult er = execute(cmd);
         if (er.getExitValue() != 0) {
             LOG.error("execute iotop failed. cmd: {}, stdout: {}, stderr: {}",
