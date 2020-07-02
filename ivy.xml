@@ -28,13 +28,14 @@
   <configurations defaultconfmapping="default">
     <conf name="master"/>
     <conf name="default" extends="optional"/>
-    <conf name="test"/>
+    <conf name="test" extends="default"/>
     <conf name="mvn-ant-task" visibility="private"/>
     <conf name="optional"/> <!-- optional in generated pom -->
     <conf name="jdiff" visibility="private"/>
     <conf name="javacc" visibility="private"/>
     <conf name="releaseaudit" visibility="private" description="Artifacts required for releaseaudit target"/>
     <conf name="owasp" visibility="private" description="Artifacts required for owasp target"/>
+    <conf name="clover" visibility="private" description="Artifacts required for clover target"/>
   </configurations>
 
   <publications>
@@ -45,6 +46,7 @@
     <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j.version}"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="${slf4j.version}" transitive="false"/>
     <dependency org="commons-cli" name="commons-cli" rev="${commons-cli.version}" />
+    <dependency org="com.github.spotbugs" name="spotbugs-annotations" rev="${spotbugsannotations.version}" />
   
     <dependency org="org.apache.maven.wagon" name="wagon-http" rev="${wagon-http.version}"
                 conf="mvn-ant-task->default"/>
@@ -58,18 +60,27 @@
     <dependency org="org.apache.yetus" name="audience-annotations"
                 rev="${audience-annotations.version}"/>
 
-    <dependency org="io.netty" name="netty" conf="default" rev="${netty.version}">
-      <artifact name="netty" type="jar" conf="default"/>
+    <dependency org="io.netty" name="netty-handler" conf="default" rev="${netty.version}">
+      <artifact name="netty-handler" type="jar" conf="default"/>
+    </dependency>
+    <dependency org="io.netty" name="netty-transport-native-epoll" conf="default" rev="${netty.version}">
+      <artifact name="netty-transport-native-epoll" type="jar" conf="default"/>
     </dependency>
 
     <dependency org="junit" name="junit" rev="${junit.version}" conf="test->default"/>
-	<dependency org="org.mockito" name="mockito-all" rev="${mockito.version}"
+	<dependency org="org.mockito" name="mockito-core" rev="${mockito.version}"
                conf="test->default"/>
     <dependency org="com.puppycrawl.tools" name="checkstyle" rev="${checkstyle.version}"
-                conf="test->default"/>
+                conf="test->default">
+        <exclude org="commons-collections" module="commons-collections"/>
+        <exclude org="commons-cli" module="commons-cli"/>
+    </dependency>
     <!-- force the tests to pull the latest commons-collections jar -->
     <dependency org="commons-collections" name="commons-collections" 
                 rev="${commons-collections.version}" conf="test->default"/>
+
+    <dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="${bouncycastle.version}" conf="test->default"/>
+    <dependency org="org.bouncycastle" name="bcpkix-jdk15on" rev="${bouncycastle.version}" conf="test->default"/>
 
     <dependency org="jdiff" name="jdiff" rev="${jdiff.version}"
                 conf="jdiff->default"/>
@@ -77,7 +88,9 @@
                 conf="jdiff->default"/>
 
     <dependency org="org.apache.rat" name="apache-rat-tasks" 
-                rev="${apache-rat-tasks.version}" conf="releaseaudit->default"/>
+                rev="${apache-rat-tasks.version}" conf="releaseaudit->default">
+        <exclude org="commons-collections" module="commons-collections"/>
+    </dependency>
     <dependency org="commons-lang" name="commons-lang" 
                 rev="${commons-lang.version}" conf="releaseaudit->default"/>
     <dependency org="commons-collections" name="commons-collections" 
@@ -88,12 +101,17 @@
     <dependency org="commons-io" name="commons-io"
                 rev="${commons-io.version}" conf="test->default"/>
 
-    <dependency org="org.apache.kerby" name="kerb-simplekdc"
-                rev="${kerby.version}" conf="test->default"/>
-    <dependency org="org.apache.kerby" name="kerby-config"
-                rev="${kerby.version}" conf="test->default"/>
+    <dependency org="org.apache.kerby" name="kerby-config" rev="${kerby.version}" conf="test->default">
+          <exclude org="org.slf4j" module="slf4j-api"/>
+          <exclude org="org.slf4j" module="slf4j-log4j12"/>
+    </dependency>
+    <dependency org="org.apache.kerby" name="kerb-simplekdc" rev="${kerby.version}" conf="test->default">
+        <exclude org="org.slf4j" module="slf4j-api"/>
+    </dependency>
     <dependency org="org.apache.kerby" name="kerb-core"
-                rev="${kerby.version}" conf="test->default"/>
+                rev="${kerby.version}" conf="test->default">
+        <exclude org="org.slf4j" module="slf4j-api"/>
+    </dependency>
     <dependency org="org.apache.kerby" name="kerb-server"
                 rev="${kerby.version}" conf="test->default"/>
     <dependency org="org.apache.kerby" name="kerb-common"
@@ -120,7 +138,15 @@
                 conf="optional->default"/>
       <dependency org="org.eclipse.jetty" name="jetty-servlet" rev="${jetty.version}"
                   conf="optional->default"/>
-    <dependency org="org.codehaus.jackson" name="jackson-mapper-asl"
-                rev="${jackson-mapper-asl.version}" conf="optional->default"/>
+    <dependency org="com.fasterxml.jackson.core" name="jackson-databind"
+                rev="${jackson.version}" conf="optional->default"/>
+
+    <dependency org="org.openclover" name="clover" rev="${clover.version}" conf="clover->default"/>
+
+    <dependency org="org.hamcrest" name="hamcrest-all" rev="${hamcrest.version}"
+                  conf="test->default" />
+
+    <conflict manager="strict"/>
+
   </dependencies>
 </ivy-module>
