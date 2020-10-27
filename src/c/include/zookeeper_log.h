@@ -25,6 +25,15 @@
 extern "C" {
 #endif
 
+// 下面这段从ofs_debug.h拷过来的。
+typedef struct zoo_debug_limits {
+    long long   timestamp_next; /* Next time when to print log at the same place */
+    int         suppress_delay; /* delay to recalcuate timestamp_next */
+    int         suppress_count;
+} zoo_debug_limits_t;
+
+int zoo_debug_write_limit(struct zoo_debug_limits * dbg_limits);
+
 extern ZOOAPI ZooLogLevel logLevel;
 #define LOGSTREAM getLogStream()
 
@@ -36,6 +45,44 @@ extern ZOOAPI ZooLogLevel logLevel;
     log_message(ZOO_LOG_LEVEL_INFO,__LINE__,__func__,format_log_message x)
 #define LOG_DEBUG(x) if(logLevel==ZOO_LOG_LEVEL_DEBUG) \
     log_message(ZOO_LOG_LEVEL_DEBUG,__LINE__,__func__,format_log_message x)
+
+
+#define LOG_ERROR_LIMIT(x) if(logLevel>=ZOO_LOG_LEVEL_ERROR) {                  \
+    static zoo_debug_limits_t dbg_limits = { 0, 0, 0 };                         \
+                                                                                \
+    if (zoo_debug_write_limit(&dbg_limits) == 0)                                \
+    {                                                                           \
+        log_message(ZOO_LOG_LEVEL_ERROR,__LINE__,__func__,format_log_message x);\
+    }                                                                           \
+}
+
+#define LOG_WARN_LIMIT(x) if(logLevel>=ZOO_LOG_LEVEL_WARN) {                    \
+    static zoo_debug_limits_t dbg_limits = { 0, 0, 0 };                         \
+                                                                                \
+    if (zoo_debug_write_limit(&dbg_limits) == 0)                                \
+    {                                                                           \
+        log_message(ZOO_LOG_LEVEL_WARN,__LINE__,__func__,format_log_message x); \
+    }                                                                           \
+}
+
+#define LOG_INFO_LIMIT(x) if(logLevel>=ZOO_LOG_LEVEL_INFO) {                    \
+    static zoo_debug_limits_t dbg_limits = { 0, 0, 0 };                         \
+                                                                                \
+    if (zoo_debug_write_limit(&dbg_limits) == 0)                                \
+    {                                                                           \
+        log_message(ZOO_LOG_LEVEL_INFO,__LINE__,__func__,format_log_message x); \
+    }                                                                           \
+}
+
+#define LOG_DEBUG_LIMIT(x) if(logLevel>=ZOO_LOG_LEVEL_DEBUG) {                  \
+    static zoo_debug_limits_t dbg_limits = { 0, 0, 0 };                         \
+                                                                                \
+    if (zoo_debug_write_limit(&dbg_limits) == 0)                                \
+    {                                                                           \
+        log_message(ZOO_LOG_LEVEL_DEBUG,__LINE__,__func__,format_log_message x);\
+    }                                                                           \
+}
+
 
 ZOOAPI void log_message(ZooLogLevel curLevel, int line,const char* funcName,
     const char* message);

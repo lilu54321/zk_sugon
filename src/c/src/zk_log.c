@@ -34,6 +34,9 @@ typedef DWORD pid_t;
 #define TIME_NOW_BUF_SIZE 1024
 #define FORMAT_LOG_BUF_SIZE 4096
 
+static int zoo_debug_max_delay = 20000000; /* 20s  */
+static int zoo_debug_min_delay = 10;       /* 10us */
+
 #ifdef THREADED
 #ifndef WIN32
 #include <pthread.h>
@@ -123,6 +126,53 @@ static const char* time_now(char* now_str){
                     (int)(tv.tv_usec/1000));
 
     return now_str;
+}
+
+// 下面这段从ofs_time_ulin.h拷过来改了改。
+static inline long long zoo_get_monotime_us(void)
+{
+    long long cur_us = 0;
+    struct timespec tv;
+
+    clock_gettime(CLOCK_MONOTONIC, &tv);
+    cur_us = ((long long)tv.tv_sec) * 1000000LL + ((long long)tv.tv_nsec) / 1000LL;
+
+    return cur_us;
+}
+
+// 下面这段从ofs_debug.c拷过来改了改，返回1表示需要进行限制。
+int zoo_debug_write_limit(struct zoo_debug_limits * dbg_limits)
+{
+    int rc = 0;
+    long long curr;
+
+    if (NULL != dbg_limits) {
+        curr = zoo_get_monotime_us();
+        if ((dbg_limits->timestamp_next > 0) && (curr < dbg_limits->timestamp_next)) {
+            dbg_limits->suppress_count++;
+            rc = 1;
+            goto l_out;
+        }
+
+        /* last timeout was a long time ago, reset the delay */
+        if (curr > dbg_limits->timestamp_next + zoo_debug_max_delay) {
+            dbg_limits->suppress_delay = zoo_debug_min_delay;
+        } else {
+            dbg_limits->suppress_delay *= 2;
+        }
+
+        if (dbg_limits->suppress_delay > zoo_debug_max_delay) {
+            dbg_limits->suppress_delay = zoo_debug_max_delay;
+        } else if (dbg_limits->suppress_delay < zoo_debug_min_delay) {
+            dbg_limits->suppress_delay = zoo_debug_min_delay;
+        }
+
+        dbg_limits->suppress_count = 0;
+        dbg_limits->timestamp_next = curr + dbg_limits->suppress_delay;
+    }
+
+l_out:
+    return rc;
 }
 
 void log_message(ZooLogLevel curLevel,int line,const char* funcName,
