@@ -1305,18 +1305,18 @@ static void update_connect_index(zhandle_t *zh)
         }
         if (rc >= 0) {
             close(fd);
-            LOG_INFO(("[%s] is reachable\n",
+            LOG_INFO_LIMIT(("[%s] is reachable\n",
                 format_endpoint_info(&zh->addrs[cur_index])));
             zh->connect_index = cur_index;
             goto l_out;
         }
-        LOG_INFO(("[%s] may be unreachable\n",
+        LOG_INFO_LIMIT(("[%s] may be unreachable\n",
             format_endpoint_info(&zh->addrs[cur_index])));
         close(fd);
         continue;
     }
 
-    LOG_WARN(("failed to check IP addresses\n"));
+    LOG_WARN_LIMIT(("failed to check IP addresses\n"));
 
     goto l_failed;
 
@@ -1340,7 +1340,7 @@ static void handle_error(zhandle_t *zh,int rc)
     }
     cleanup_bufs(zh,1,rc);
     zh->fd = -1;
-    LOG_INFO(("update connect index\n"));
+    LOG_INFO_LIMIT(("update connect index\n"));
     update_connect_index(zh);
     if (!is_unrecoverable(zh)) {
         zh->state = 0;
@@ -1354,14 +1354,20 @@ static int handle_socket_error_msg(zhandle_t *zh, int line, int rc,
         const char* format, ...)
 {
     if(logLevel>=ZOO_LOG_LEVEL_ERROR){
-        va_list va;
-        char buf[1024];
-        va_start(va,format);
-        vsnprintf(buf, sizeof(buf)-1,format,va);
-        log_message(ZOO_LOG_LEVEL_ERROR,line,__func__,
-            format_log_message("Socket [%s] zk retcode=%d, errno=%d(%s): %s",
-            format_current_endpoint_info(zh),rc,errno,strerror(errno),buf));
-        va_end(va);
+        static zoo_debug_limits_t dbg_limits = { 0, 0, 0 };
+
+        if (zoo_debug_write_limit(&dbg_limits) == 0)
+        {
+            va_list va;
+            char buf[1024];
+
+            va_start(va,format);
+            vsnprintf(buf, sizeof(buf)-1,format,va);
+            log_message(ZOO_LOG_LEVEL_ERROR,line,__func__,
+                format_log_message("Socket [%s] zk retcode=%d, errno=%d(%s): %s",
+                format_current_endpoint_info(zh),rc,errno,strerror(errno),buf));
+            va_end(va);
+        }
     }
     handle_error(zh,rc);
     return rc;
@@ -1829,7 +1835,7 @@ static int check_events(zhandle_t *zh, int events)
         }
         if((rc=prime_connection(zh))!=0)
             return rc;
-        LOG_INFO(("initiated connection to server [%s]",
+        LOG_INFO_LIMIT(("initiated connection to server [%s]",
                 format_endpoint_info(&zh->addrs[zh->connect_index])));
         return ZOK;
     }
